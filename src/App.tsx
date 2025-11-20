@@ -28,14 +28,14 @@ import {
   Typography,
 } from "@mui/material";
 import AddBoxIcon from "@mui/icons-material/AddBox";
-import EditIcon from "@mui/icons-material/Edit";
 import hazmo from "./assets/hazmo.png";
 
 const client = generateClient<Schema>();
 
 function App() {
-  const [open, setOpen] = useState(false);
+  const [openAddDialog, setOpenAddDialog] = useState(false);
   const [message, setMessage] = useState("");
+  const [updating, setUpdating] = useState(false);
   const [suppliers, setSuppliers] = useState<Array<Schema["supplier"]["type"]>>(
     []
   );
@@ -69,7 +69,6 @@ function App() {
     const formJson = Object.fromEntries(formData.entries());
 
     try {
-      console.log(formJson);
       const newProduct = await client.models.product.create({
         supplierId: selectedSupplier?.id || "",
         name: formJson.product as string,
@@ -80,10 +79,7 @@ function App() {
         retail: Number(formJson.retail),
       });
       const created = newProduct.data;
-      if (!created) {
-        console.error("Product creation returned null");
-        return;
-      }
+      if (!created) return;
       setProductsBySupplier((prev) => {
         const key = String(selectedSupplier?.id);
         const existing = prev[key] ?? [];
@@ -92,12 +88,45 @@ function App() {
           [key]: [...existing, created],
         };
       });
-      setMessage("Product created successfully!");
     } catch (error) {
       console.error("Failed to create product:", error);
       setMessage("Failed to create product.");
     } finally {
-      setOpen(false);
+      setMessage("Product created successfully!");
+      setOpenAddDialog(false);
+    }
+  }
+
+  async function updateProduct(
+    id: string,
+    field: keyof Schema["product"]["type"],
+    value: number | string
+  ) {
+    try {
+      setUpdating(true);
+      const updatedProduct = await client.models.product.update({
+        id: id,
+        [field]: value,
+      });
+      const updated = updatedProduct.data;
+      if (!updated) return;
+      setProductsBySupplier((prev) => {
+        const supplierId = String(updated.supplierId);
+        const existing = prev[supplierId] ?? [];
+        const updatedList = existing.map((p) =>
+          p.id === updated.id ? updated : p
+        );
+        return {
+          ...prev,
+          [supplierId]: updatedList,
+        };
+      });
+    } catch (error) {
+      console.error("Failed to update product:", error);
+      setMessage("Failed to update product.");
+    } finally {
+      setMessage(`Updated ${field} successfully!`);
+      setUpdating(false);
     }
   }
 
@@ -110,9 +139,8 @@ function App() {
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
         <Alert
-          severity={
-            message === "Product created successfully!" ? "success" : "error"
-          }
+          variant="filled"
+          severity="success"
           onClose={() => setMessage("")}
         >
           {message}
@@ -153,16 +181,11 @@ function App() {
                                 <IconButton
                                   aria-label="add"
                                   onClick={() => {
-                                    setOpen(true);
+                                    setOpenAddDialog(true);
                                     setSelectedSupplier(supplier);
                                   }}
                                 >
-                                  <AddBoxIcon></AddBoxIcon>
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip arrow title="Edit products">
-                                <IconButton aria-label="edit">
-                                  <EditIcon />
+                                  <AddBoxIcon />
                                 </IconButton>
                               </Tooltip>
                             </ButtonGroup>
@@ -175,6 +198,7 @@ function App() {
                           <TableCell>Cost</TableCell>
                           <TableCell>Retail</TableCell>
                           <TableCell># Sold</TableCell>
+                          <TableCell>Notes</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -182,14 +206,225 @@ function App() {
                           ? productsBySupplier[supplier.id]?.map((product) => (
                               <TableRow key={product.id}>
                                 <TableCell>
-                                  {product.name}
-                                  {product.dose ? ` (${product.dose}mL)` : ""}
+                                  <Typography>{product.name}</Typography>
+                                  <Typography variant="subtitle2">
+                                    {product.dose ? ` ${product.dose}mL` : ""}
+                                  </Typography>
                                 </TableCell>
-                                <TableCell>{product.quantity}</TableCell>
-                                <TableCell>{product.expiration}</TableCell>
-                                <TableCell>{product.cost}</TableCell>
-                                <TableCell>{product.retail}</TableCell>
-                                <TableCell>{product.numSold}</TableCell>
+                                <TableCell>
+                                  <OutlinedInput
+                                    type="number"
+                                    size="small"
+                                    defaultValue={product.quantity}
+                                    disabled={updating ? true : false}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        const newValue = Number(
+                                          e.currentTarget.value
+                                        );
+                                        if (newValue !== product.quantity) {
+                                          updateProduct(
+                                            product.id!,
+                                            "quantity",
+                                            newValue
+                                          );
+                                        }
+                                        e.currentTarget.blur();
+                                      }
+                                    }}
+                                    onBlur={(e) => {
+                                      const newValue = Number(
+                                        e.currentTarget.value
+                                      );
+                                      if (newValue !== product.quantity) {
+                                        updateProduct(
+                                          product.id!,
+                                          "quantity",
+                                          newValue
+                                        );
+                                      }
+                                    }}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <OutlinedInput
+                                    type="date"
+                                    size="small"
+                                    defaultValue={product.expiration}
+                                    disabled={updating ? true : false}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        const newValue = e.currentTarget.value;
+
+                                        if (newValue !== product.expiration) {
+                                          updateProduct(
+                                            product.id!,
+                                            "expiration",
+                                            newValue
+                                          );
+                                        }
+                                        e.currentTarget.blur();
+                                      }
+                                    }}
+                                    onBlur={(e) => {
+                                      const newValue = e.currentTarget.value;
+
+                                      if (newValue !== product.expiration) {
+                                        updateProduct(
+                                          product.id!,
+                                          "expiration",
+                                          newValue
+                                        );
+                                      }
+                                    }}
+                                  ></OutlinedInput>
+                                </TableCell>
+                                <TableCell>
+                                  <OutlinedInput
+                                    startAdornment={
+                                      <InputAdornment position="start">
+                                        $
+                                      </InputAdornment>
+                                    }
+                                    type="number"
+                                    size="small"
+                                    defaultValue={product.cost}
+                                    disabled={updating ? true : false}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        const newValue = Number(
+                                          e.currentTarget.value
+                                        );
+                                        if (newValue !== product.cost) {
+                                          updateProduct(
+                                            product.id!,
+                                            "cost",
+                                            newValue
+                                          );
+                                        }
+                                        e.currentTarget.blur();
+                                      }
+                                    }}
+                                    onBlur={(e) => {
+                                      const newValue = Number(
+                                        e.currentTarget.value
+                                      );
+                                      if (newValue !== product.cost) {
+                                        updateProduct(
+                                          product.id!,
+                                          "cost",
+                                          newValue
+                                        );
+                                      }
+                                    }}
+                                  ></OutlinedInput>
+                                </TableCell>
+                                <TableCell>
+                                  <OutlinedInput
+                                    startAdornment={
+                                      <InputAdornment position="start">
+                                        $
+                                      </InputAdornment>
+                                    }
+                                    type="number"
+                                    size="small"
+                                    defaultValue={product.retail}
+                                    disabled={updating ? true : false}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        const newValue = Number(
+                                          e.currentTarget.value
+                                        );
+                                        if (newValue !== product.retail) {
+                                          updateProduct(
+                                            product.id!,
+                                            "retail",
+                                            newValue
+                                          );
+                                        }
+                                        e.currentTarget.blur();
+                                      }
+                                    }}
+                                    onBlur={(e) => {
+                                      const newValue = Number(
+                                        e.currentTarget.value
+                                      );
+                                      if (newValue !== product.retail) {
+                                        updateProduct(
+                                          product.id!,
+                                          "retail",
+                                          newValue
+                                        );
+                                      }
+                                    }}
+                                  ></OutlinedInput>
+                                </TableCell>
+                                <TableCell>
+                                  <OutlinedInput
+                                    type="number"
+                                    size="small"
+                                    defaultValue={product.numSold}
+                                    disabled={updating ? true : false}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        const newValue = Number(
+                                          e.currentTarget.value
+                                        );
+                                        if (newValue !== product.numSold) {
+                                          updateProduct(
+                                            product.id!,
+                                            "numSold",
+                                            newValue
+                                          );
+                                        }
+                                        e.currentTarget.blur();
+                                      }
+                                    }}
+                                    onBlur={(e) => {
+                                      const newValue = Number(
+                                        e.currentTarget.value
+                                      );
+                                      if (newValue !== product.numSold) {
+                                        updateProduct(
+                                          product.id!,
+                                          "cost",
+                                          newValue
+                                        );
+                                      }
+                                    }}
+                                  ></OutlinedInput>
+                                </TableCell>
+                                <TableCell>
+                                  <OutlinedInput
+                                    multiline
+                                    size="small"
+                                    defaultValue={product.notes}
+                                    disabled={updating ? true : false}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        const newValue = e.currentTarget.value;
+                                        if (newValue !== product.notes) {
+                                          updateProduct(
+                                            product.id!,
+                                            "notes",
+                                            newValue
+                                          );
+                                        }
+                                        e.currentTarget.blur();
+                                      }
+                                    }}
+                                    onBlur={(e) => {
+                                      const newValue = e.currentTarget.value;
+                                      if (newValue !== product.notes) {
+                                        updateProduct(
+                                          product.id!,
+                                          "notes",
+                                          newValue
+                                        );
+                                      }
+                                    }}
+                                  ></OutlinedInput>
+                                </TableCell>
                               </TableRow>
                             ))
                           : null}
@@ -202,7 +437,7 @@ function App() {
           ))}
         </Grid>
       </Grid>
-      <Dialog open={open} onClose={() => setOpen(false)}>
+      <Dialog open={openAddDialog} onClose={() => setOpenAddDialog(false)}>
         <DialogTitle>{selectedSupplier?.name}</DialogTitle>
         <DialogContent>
           <DialogActions>
@@ -239,6 +474,7 @@ function App() {
               <FormControl fullWidth margin="dense">
                 <InputLabel shrink>Expiration</InputLabel>
                 <OutlinedInput
+                  notched
                   required
                   name="expiration"
                   label="Expiration"
@@ -249,6 +485,9 @@ function App() {
                 <InputLabel>Cost</InputLabel>
                 <OutlinedInput
                   required
+                  startAdornment={
+                    <InputAdornment position="start">$</InputAdornment>
+                  }
                   type="number"
                   name="cost"
                   label="Cost"
@@ -258,6 +497,9 @@ function App() {
                 <InputLabel>Retail</InputLabel>
                 <OutlinedInput
                   required
+                  startAdornment={
+                    <InputAdornment position="start">$</InputAdornment>
+                  }
                   type="number"
                   name="retail"
                   label="Retail"

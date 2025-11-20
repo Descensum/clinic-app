@@ -21,6 +21,7 @@ const schema = a.schema({
       cost: a.float(),
       retail: a.float(),
       numSold: a.integer(),
+      notes: a.string(),
     })
     .authorization((allow) => [allow.publicApiKey()]),
 });
