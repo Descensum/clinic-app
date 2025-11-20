@@ -26,12 +26,12 @@ const client = generateClient<Schema>();
 
 function App() {
   const [open, setOpen] = useState(false);
-  const [suppliers, setSuppliers] = useState<Schema["supplier"]["type"] | null>(
-    null
+  const [suppliers, setSuppliers] = useState<Array<Schema["supplier"]["type"]>>(
+    []
   );
   const [selectedSupplier, setSelectedSupplier] = useState<
-    Array<Schema["supplier"]["type"]>
-  >([]);
+    Schema["supplier"]["type"] | null
+  >(null);
   const [productsBySupplier, setProductsBySupplier] = useState<
     Record<string, Array<Schema["product"]["type"]>>
   >({});
@@ -42,11 +42,11 @@ function App() {
       setSuppliers(supplierList);
       supplierList.forEach((supplier) => {
         client.models.product
-          .list({ filter: { supplierId: { eq: supplier.id } } })
+          .list({ filter: { supplierId: { eq: supplier.id ?? undefined } } })
           .then((prodResult) => {
             setProductsBySupplier((prev) => ({
               ...prev,
-              [supplier.id]: prodResult.data ?? [],
+              [String(supplier.id)]: prodResult.data ?? [],
             }));
           });
       });
@@ -83,18 +83,20 @@ function App() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {productsBySupplier[supplier.id]?.map((product) => (
-                    <TableRow key={product.id}>
-                      <TableCell>{product.name}</TableCell>
-                      <TableCell>{product.quantity}</TableCell>
-                      <TableCell>{product.cost}</TableCell>
-                      <TableCell>{product.retail}</TableCell>
-                      <TableCell>{product.numSold}</TableCell>
-                      <IconButton aria-label="edit">
-                        <EditIcon />
-                      </IconButton>
-                    </TableRow>
-                  ))}
+                  {supplier.id
+                    ? productsBySupplier[supplier.id]?.map((product) => (
+                        <TableRow key={product.id}>
+                          <TableCell>{product.name}</TableCell>
+                          <TableCell>{product.quantity}</TableCell>
+                          <TableCell>{product.cost}</TableCell>
+                          <TableCell>{product.retail}</TableCell>
+                          <TableCell>{product.numSold}</TableCell>
+                          <IconButton aria-label="edit">
+                            <EditIcon />
+                          </IconButton>
+                        </TableRow>
+                      ))
+                    : null}
                   <IconButton
                     aria-label="add"
                     onClick={() => {
