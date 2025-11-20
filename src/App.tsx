@@ -4,14 +4,19 @@ import { generateClient } from "aws-amplify/data";
 import {
   Alert,
   Button,
+  ButtonGroup,
   Card,
   CardContent,
-  CardHeader,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControl,
+  Grid,
   IconButton,
+  InputAdornment,
+  InputLabel,
+  OutlinedInput,
   Snackbar,
   Table,
   TableBody,
@@ -19,9 +24,12 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TextField,
+  Tooltip,
+  Typography,
 } from "@mui/material";
 import AddBoxIcon from "@mui/icons-material/AddBox";
+import EditIcon from "@mui/icons-material/Edit";
+import hazmo from "./assets/hazmo.png";
 
 const client = generateClient<Schema>();
 
@@ -110,115 +118,151 @@ function App() {
           {message}
         </Alert>
       </Snackbar>
-      {suppliers?.map((supplier) => (
-        <Card key={supplier.id}>
-          <CardHeader
-            title={supplier.name}
-            action={
-              <IconButton
-                aria-label="add"
-                onClick={() => {
-                  setOpen(true);
-                  setSelectedSupplier(supplier);
-                }}
-              >
-                <AddBoxIcon />
-              </IconButton>
-            }
-          />
-          <CardContent>
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Product</TableCell>
-                    <TableCell>Quantity</TableCell>
-                    <TableCell>Expiration</TableCell>
-                    <TableCell>Cost</TableCell>
-                    <TableCell>Retail</TableCell>
-                    <TableCell># Sold</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {supplier.id
-                    ? productsBySupplier[supplier.id]?.map((product) => (
-                        <TableRow key={product.id}>
-                          <TableCell>
-                            {product.name}
-                            {product.dose ? ` (${product.dose}mL)` : ""}
+      <Grid
+        container
+        sx={{
+          minHeight: "100vh",
+          backgroundImage: `url(${hazmo})`,
+          backgroundRepeat: "no-repeat",
+          backgroundSize: "300px",
+          backgroundPosition: "bottom right",
+          p: 2,
+        }}
+      >
+        <Grid container spacing={2}>
+          {suppliers?.map((supplier) => (
+            <Grid
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+              }}
+              size={12}
+            >
+              <Card raised>
+                <CardContent>
+                  <TableContainer>
+                    <Table size="small" stickyHeader>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell align="center" colSpan={6}>
+                            <Typography variant="h6">
+                              {supplier.name}
+                            </Typography>
+                            <ButtonGroup>
+                              <Tooltip arrow title="Add product">
+                                <IconButton
+                                  aria-label="add"
+                                  onClick={() => {
+                                    setOpen(true);
+                                    setSelectedSupplier(supplier);
+                                  }}
+                                >
+                                  <AddBoxIcon></AddBoxIcon>
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip arrow title="Edit products">
+                                <IconButton aria-label="edit">
+                                  <EditIcon />
+                                </IconButton>
+                              </Tooltip>
+                            </ButtonGroup>
                           </TableCell>
-                          <TableCell>{product.quantity}</TableCell>
-                          <TableCell>{product.expiration}</TableCell>
-                          <TableCell>{product.cost}</TableCell>
-                          <TableCell>{product.retail}</TableCell>
-                          <TableCell>{product.numSold}</TableCell>
                         </TableRow>
-                      ))
-                    : null}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </CardContent>
-        </Card>
-      ))}
+                        <TableRow>
+                          <TableCell>Product</TableCell>
+                          <TableCell>Quantity</TableCell>
+                          <TableCell>Expiration</TableCell>
+                          <TableCell>Cost</TableCell>
+                          <TableCell>Retail</TableCell>
+                          <TableCell># Sold</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {supplier.id
+                          ? productsBySupplier[supplier.id]?.map((product) => (
+                              <TableRow key={product.id}>
+                                <TableCell>
+                                  {product.name}
+                                  {product.dose ? ` (${product.dose}mL)` : ""}
+                                </TableCell>
+                                <TableCell>{product.quantity}</TableCell>
+                                <TableCell>{product.expiration}</TableCell>
+                                <TableCell>{product.cost}</TableCell>
+                                <TableCell>{product.retail}</TableCell>
+                                <TableCell>{product.numSold}</TableCell>
+                              </TableRow>
+                            ))
+                          : null}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Grid>
       <Dialog open={open} onClose={() => setOpen(false)}>
-        <DialogTitle>
-          Add a new product for {selectedSupplier?.name}
-        </DialogTitle>
+        <DialogTitle>{selectedSupplier?.name}</DialogTitle>
         <DialogContent>
           <DialogActions>
             <form onSubmit={handleSubmit} id="add-product-form">
-              <TextField
-                autoFocus
-                required
-                name="product"
-                label="Product"
-                fullWidth
-                variant="standard"
-              />
-              <TextField
-                autoFocus
-                type="number"
-                name="dose"
-                label="Dose"
-                fullWidth
-                variant="standard"
-              />
-              <TextField
-                autoFocus
-                required
-                type="number"
-                name="quantity"
-                label="Quantity"
-                fullWidth
-                variant="standard"
-              />
-              <TextField
-                autoFocus
-                type="date"
-                name="expiration"
-                label="Expiration"
-                fullWidth
-                variant="standard"
-              />
-              <TextField
-                autoFocus
-                required
-                type="number"
-                name="cost"
-                label="Cost"
-                fullWidth
-                variant="standard"
-              />
-              <TextField
-                autoFocus
-                required
-                type="number"
-                name="retail"
-                label="Retail"
-                fullWidth
-                variant="standard"
-              />
+              <FormControl fullWidth margin="dense">
+                <InputLabel>Product</InputLabel>
+                <OutlinedInput
+                  required
+                  name="product"
+                  label="Product"
+                  autoFocus
+                />
+              </FormControl>
+              <FormControl fullWidth margin="dense">
+                <InputLabel>Dose</InputLabel>
+                <OutlinedInput
+                  endAdornment={
+                    <InputAdornment position="end">mL</InputAdornment>
+                  }
+                  name="dose"
+                  label="Dose"
+                  type="number"
+                />
+              </FormControl>
+              <FormControl fullWidth margin="dense">
+                <InputLabel>Quantity</InputLabel>
+                <OutlinedInput
+                  required
+                  name="quantity"
+                  label="Quantity"
+                  type="number"
+                />
+              </FormControl>
+              <FormControl fullWidth margin="dense">
+                <InputLabel shrink>Expiration</InputLabel>
+                <OutlinedInput
+                  required
+                  name="expiration"
+                  label="Expiration"
+                  type="date"
+                />
+              </FormControl>
+              <FormControl fullWidth margin="dense">
+                <InputLabel>Cost</InputLabel>
+                <OutlinedInput
+                  required
+                  type="number"
+                  name="cost"
+                  label="Cost"
+                />
+              </FormControl>
+              <FormControl fullWidth margin="dense">
+                <InputLabel>Retail</InputLabel>
+                <OutlinedInput
+                  required
+                  type="number"
+                  name="retail"
+                  label="Retail"
+                />
+              </FormControl>
               <Button fullWidth type="submit" form="add-product-form">
                 Submit
               </Button>
