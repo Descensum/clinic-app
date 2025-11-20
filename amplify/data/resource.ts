@@ -21,8 +21,11 @@ const schema = a.schema({
       supplierId: a.id(),
       supplier: a.belongsTo("supplier", "supplierId"),
       name: a.string(),
-      quantity: a.float(),
-      price: a.float(),
+      dose: a.integer(),
+      quantity: a.integer(),
+      cost: a.float(),
+      retail: a.float(),
+      numSold: a.integer(),
     })
     .authorization((allow) => [allow.publicApiKey()]),
 });

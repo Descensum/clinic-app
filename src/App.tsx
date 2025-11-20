@@ -2,172 +2,158 @@ import { useEffect, useState } from "react";
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
 import {
+  Button,
   Card,
   CardContent,
   CardHeader,
-  Grid,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
 } from "@mui/material";
+import AddBoxIcon from "@mui/icons-material/AddBox";
+import EditIcon from "@mui/icons-material/Edit";
 
 const client = generateClient<Schema>();
 
-function createData(
-  product: string,
-  amount: number,
-  cost: number,
-  sold: number
-) {
-  return { product, amount, cost, sold };
-}
-
-const rows = [
-  createData("Product A", 100, 29.99, 50),
-  createData("Product B", 200, 19.99, 150),
-  createData("Product C", 150, 39.99, 75),
-];
-
 function App() {
-  const [suppliers, setSuppliers] = useState<Array<Schema["supplier"]["type"]>>(
-    []
+  const [open, setOpen] = useState(false);
+  const [suppliers, setSuppliers] = useState<Schema["supplier"]["type"] | null>(
+    null
   );
-
-  // useEffect(() => {
-  //   client.models.Todo.observeQuery().subscribe({
-  //     next: (data) => setTodos([...data.items]),
-  //   });
-  // }, []);
-
-  // function createTodo() {
-  //   client.models.Todo.create({ content: window.prompt("Todo content") });
-  // }
-
-  // function deleteTodo(id: string) {
-  //   client.models.Todo.delete({ id });
-  // }
+  const [selectedSupplier, setSelectedSupplier] = useState<
+    Array<Schema["supplier"]["type"]>
+  >([]);
+  const [productsBySupplier, setProductsBySupplier] = useState<
+    Record<string, Array<Schema["product"]["type"]>>
+  >({});
 
   useEffect(() => {
     client.models.supplier.list().then((result) => {
-      setSuppliers(result.data ?? []);
+      const supplierList = result.data ?? [];
+      setSuppliers(supplierList);
+      supplierList.forEach((supplier) => {
+        client.models.product
+          .list({ filter: { supplierId: { eq: supplier.id } } })
+          .then((prodResult) => {
+            setProductsBySupplier((prev) => ({
+              ...prev,
+              [supplier.id]: prodResult.data ?? [],
+            }));
+          });
+      });
     });
   }, []);
 
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    return client.models.product.create({
+      name: formData.get("Product") as string,
+      dose: Number(formData.get("Dose")),
+      quantity: Number(formData.get("Quantity")),
+      cost: Number(formData.get("Cost")),
+      retail: Number(formData.get("Retail")),
+    });
+  }
+
   return (
     <>
-      <Grid container spacing={4}>
-        <Card>
-          <CardHeader title="Manufacturer 1"></CardHeader>
+      {suppliers?.map((supplier) => (
+        <Card key={supplier.id}>
+          <CardHeader title={supplier.name} />
           <CardContent>
             <TableContainer>
               <Table>
                 <TableHead>
                   <TableRow>
                     <TableCell>Product</TableCell>
-                    <TableCell>Amount</TableCell>
+                    <TableCell>Quantity</TableCell>
                     <TableCell>Cost</TableCell>
+                    <TableCell>Retail</TableCell>
                     <TableCell># Sold</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {rows.map((row) => (
-                    <TableRow key={row.product}>
-                      <TableCell>{row.product}</TableCell>
-                      <TableCell>{row.amount}</TableCell>
-                      <TableCell>{row.cost}</TableCell>
-                      <TableCell>{row.sold}</TableCell>
+                  {productsBySupplier[supplier.id]?.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell>{product.name}</TableCell>
+                      <TableCell>{product.quantity}</TableCell>
+                      <TableCell>{product.cost}</TableCell>
+                      <TableCell>{product.retail}</TableCell>
+                      <TableCell>{product.numSold}</TableCell>
+                      <IconButton aria-label="edit">
+                        <EditIcon />
+                      </IconButton>
                     </TableRow>
                   ))}
+                  <IconButton
+                    aria-label="add"
+                    onClick={() => {
+                      setOpen(!open);
+                      setSelectedSupplier(supplier);
+                    }}
+                  >
+                    <AddBoxIcon />
+                  </IconButton>
                 </TableBody>
               </Table>
             </TableContainer>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader title="Manufacturer 2"></CardHeader>
-          <CardContent>
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Product</TableCell>
-                    <TableCell>Amount</TableCell>
-                    <TableCell>Cost</TableCell>
-                    <TableCell># Sold</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {rows.map((row) => (
-                    <TableRow key={row.product}>
-                      <TableCell>{row.product}</TableCell>
-                      <TableCell>{row.amount}</TableCell>
-                      <TableCell>{row.cost}</TableCell>
-                      <TableCell>{row.sold}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader title="Manufacturer 3"></CardHeader>
-          <CardContent>
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Product</TableCell>
-                    <TableCell>Amount</TableCell>
-                    <TableCell>Cost</TableCell>
-                    <TableCell># Sold</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {rows.map((row) => (
-                    <TableRow key={row.product}>
-                      <TableCell>{row.product}</TableCell>
-                      <TableCell>{row.amount}</TableCell>
-                      <TableCell>{row.cost}</TableCell>
-                      <TableCell>{row.sold}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </CardContent>
-        </Card>
-      </Grid>
-      <div>
-        <h2>Suppliers</h2>
-        <ul>
-          {suppliers.map((supplier) => (
-            <li key={supplier.id}>{supplier.name}</li>
-          ))}
-        </ul>
-      </div>
+      ))}
+      <Dialog open={open} onClose={() => setOpen(!open)}>
+        <DialogTitle>
+          Add a new product for {selectedSupplier?.name}
+        </DialogTitle>
+        <DialogContent>
+          <DialogActions>
+            <form onSubmit={handleSubmit} id="add-product-form">
+              <TextField
+                autoFocus
+                required
+                label="Product"
+                fullWidth
+                variant="standard"
+              />
+              <TextField autoFocus label="Dose" fullWidth variant="standard" />
+              <TextField
+                autoFocus
+                required
+                label="Quantity"
+                fullWidth
+                variant="standard"
+              />
+              <TextField
+                autoFocus
+                required
+                label="Cost"
+                fullWidth
+                variant="standard"
+              />
+              <TextField
+                autoFocus
+                required
+                label="Retail"
+                fullWidth
+                variant="standard"
+              />
+            </form>
+            <Button type="submit" form="add-product-form">
+              Submit
+            </Button>
+          </DialogActions>
+        </DialogContent>
+      </Dialog>
     </>
-    // <main>
-    //   <h1>My todos</h1>
-    //   <button onClick={createTodo}>+ new</button>
-    //   <ul>
-    //     {todos.map((todo) => (
-    //       <li onClick={() => deleteTodo(todo.id)} key={todo.id}>
-    //         {todo.content}
-    //       </li>
-    //     ))}
-    //   </ul>
-    //   <div>
-    //     🥳 App successfully hosted. Try creating a new todo.
-    //     <br />
-    //     <a href="https://docs.amplify.aws/react/start/quickstart/#make-frontend-updates">
-    //       Review next step of this tutorial.
-    //     </a>
-    //   </div>
-    // </main>
   );
 }
 
