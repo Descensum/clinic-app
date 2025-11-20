@@ -172,7 +172,7 @@ function App() {
                     <Table size="small" stickyHeader>
                       <TableHead>
                         <TableRow>
-                          <TableCell align="center" colSpan={6}>
+                          <TableCell align="center" colSpan={7}>
                             <Typography variant="h6">
                               {supplier.name}
                             </Typography>
