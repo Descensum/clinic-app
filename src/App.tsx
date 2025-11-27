@@ -144,6 +144,12 @@ function App() {
             return updatedProducts;
           });
         }
+
+        setSelected((prevSelected) => {
+          const updatedSelected = { ...prevSelected };
+          delete updatedSelected[supplierId];
+          return updatedSelected;
+        });
       } catch (error) {
         console.error("Error deleting product", error);
         setMessage("Failed to delete product.");
